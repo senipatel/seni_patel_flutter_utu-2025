@@ -1,4 +1,7 @@
+import "dart:convert";
+
 import "package:flutter/material.dart";
+import "package:shared_preferences/shared_preferences.dart";
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -11,6 +14,28 @@ class _HomepageState extends State<Homepage> {
 
   List<Map<String, dynamic>> task = [];
   TextEditingController userInput = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final taskList = prefs.getStringList('tasks');
+    if (taskList != null) {
+      setState(() {
+        task = taskList.map((e) => jsonDecode(e) as Map<String, dynamic>).toList();
+      });
+    }
+  }
+
+  Future<void> _saveTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final taskList = task.map((e) => jsonEncode(e)).toList();
+    await prefs.setStringList('tasks', taskList);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +90,7 @@ class _HomepageState extends State<Homepage> {
                           setState(() {
                             task.add(userInsert);
                           });
+                          _saveTasks();
                           userInput.clear();
                           Navigator.pop(context);
                         }
@@ -91,34 +117,30 @@ class _HomepageState extends State<Homepage> {
         itemBuilder: (_, index) {
           final data = task[index];
           return ListTile(
+            leading: GestureDetector(
+              onTap: () {
+                setState(() {
+                  data['bookmark'] = !data['bookmark'];
+                });
+                _saveTasks();
+              },
+              child: Icon(
+                data['bookmark']
+                    ? Icons.check_box_outlined
+                    : Icons.check_box_outline_blank_rounded,
+                size: 25,
+                color: Colors.blue,
+              ),
+            ),
             title: Text(
               data['task'],
-              style: TextStyle(fontSize: 20, color: Colors.black),
+              style: TextStyle(fontSize: 20, color: Colors.black, decoration: data['bookmark'] ? TextDecoration.lineThrough: TextDecoration.none ),
             ),
             trailing: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    if (data['bookmark']) {
-                      setState(() {
-                        data['bookmark'] = false;
-                      });
-                    } else {
-                      setState(() {
-                        data['bookmark'] = true;
-                      });
-                    }
-                  },
-                  child: Icon(
-                    data['bookmark']
-                        ? Icons.bookmark_add
-                        : Icons.bookmark_add_outlined,
-                    size: 25,
-                    color: Colors.blue,
-                  ),
-                ),
+
                 SizedBox(width: 10),
                 GestureDetector(
                   onTap: () {
@@ -140,6 +162,7 @@ class _HomepageState extends State<Homepage> {
                                   setState(() {
                                     task.removeAt(index);
                                   });
+                                  _saveTasks();
                                   Navigator.pop(context);
                                 },
                                 child: Text(
