@@ -2,4 +2,4 @@
 
 A new Flutter project.
 
-did the flutter project as per instructions 
+I did the flutter project as per instructions 
